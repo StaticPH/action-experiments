@@ -68,6 +68,11 @@ jobs:
         # Git then creates, initializes, and fetches the cargo-feature repository at D:/a/action-experiments/action-experiments/cargo-feature/
         run: cd ${{ env.CRATE_PATH }}
       ##########
+      - name: getenv
+        shell: bash
+        # There may be useful information in here that really should be clearly documented somewhere, but isn't.
+        run: env
+      ##########
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
