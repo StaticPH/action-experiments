@@ -63,17 +63,6 @@ jobs:
           # Relative path under $GITHUB_WORKSPACE to place the repository
           path: ${{ env.CRATE_PATH }}
       ##########
-      - name: Go To Cargo.toml
-        # Switch to the explicitly specified path, relative to $GITHUB_WORKSPACE, at which the repository has been checked out, ${{ env.CRATE_PATH }}
-        # This repository creates D:/a/action-experiments/action-experiments/
-        # Git then creates, initializes, and fetches the cargo-feature repository at D:/a/action-experiments/action-experiments/cargo-feature/
-        shell: bash
-        run: |
-          printf '%s\n' 'This is probably a pointless step...'
-          printf 'Previous working directory: "%s"\n' "$(pwd)"
-          pushd "$GITHUB_WORKSPACE/${{ env.CRATE_PATH }}"
-          printf 'Present working directory: "%s"\n' "$(pwd)"
-      ##########
       - name: Show working directory structure (Ubuntu)
         # Because I don't know what's where
         if: startsWith(matrix.job.os, 'ubuntu')
@@ -82,9 +71,9 @@ jobs:
           printf 'Present working directory: "%s"\n' "$(pwd)"
           # Display as a tree, if possible
           if command -v tree >/dev/null 2>&1; then
-            fd-find -uuaL | command tree -al -I '.git'
+            fd-find -uuaL -E '.git' | command tree -al
           else
-            fd-find -uuaL
+            fd-find -uuaL -E '.git'
           fi
       ##########
       - name: Show working directory structure (Windows)
@@ -95,9 +84,9 @@ jobs:
           printf 'Present working directory: "%s"\n' "$(pwd)"
           # Display as a tree, if possible
           if command -v tree >/dev/null 2>&1; then
-            $HOME/fd-find/fd.exe -uuaL | command tree -al -I '.git'
+            $HOME/fd-find/fd.exe -uuaL -E '.git' | command tree -al
           else
-            $HOME/fd-find/fd.exe -uuaL
+            $HOME/fd-find/fd.exe -uuaL -E '.git'
           fi
       ##########
       - name: getenv
@@ -110,17 +99,17 @@ jobs:
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: build
-          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "$GITHUB_WORKSPACE/${{ env.CRATE_PATH }}/Cargo.toml"
+          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "${{ github.workspace }}/${{ env.CRATE_PATH }}/Cargo.toml"
       ##########
       - name: Show directory structure (Ubuntu)
         # Because I don't know where any given generated artifact is going to be yet
         if: startsWith(matrix.job.os, 'ubuntu')
-        run: fd-find -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
+        run: fd-find -uuaL -d 5 --path-separator "//" --one-file-system -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Show directory structure (Windows)
         # Because I don't know where any given generated artifact is going to be yet
         if: startsWith(matrix.job.os, 'windows')
-        run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
+        run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Create release (Ubuntu)
         if: startsWith(matrix.job.os, 'ubuntu')
