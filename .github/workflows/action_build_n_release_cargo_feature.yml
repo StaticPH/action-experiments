@@ -78,17 +78,20 @@ jobs:
         if: startsWith(matrix.job.os, 'ubuntu')
         shell: bash
         run: |
+          printf 'Present working directory: "%s"\n' "$(pwd)"
           # Display as a tree, if possible
           if command -v tree >/dev/null 2>&1; then
             fd-find -uuaL | command tree -al -I '.git'
           else
             fd-find -uuaL
-          fi      ##########
+          fi
+      ##########
       - name: Show working directory structure (Windows)
         # Because I don't know what's where
         if: startsWith(matrix.job.os, 'windows')
         shell: bash
         run: |
+          printf 'Present working directory: "%s"\n' "$(pwd)"
           # Display as a tree, if possible
           if command -v tree >/dev/null 2>&1; then
             $HOME/fd-find/fd.exe -uuaL | command tree -al -I '.git'
