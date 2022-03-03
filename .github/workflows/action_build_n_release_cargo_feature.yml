@@ -22,81 +22,81 @@ jobs:
                 - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
         steps:
             - name: Get fd (Ubuntu)
-                if: startsWith(matrix.os, 'ubuntu')
-                run: |
-                    sudo apt-get update
-                    sudo apt-get install -y --no-install-recommends fd-find
+              if: startsWith(matrix.os, 'ubuntu')
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y --no-install-recommends fd-find
             ##########
             - name: Get fd (Windows)
-                if: startsWith(matrix.os, 'windows')
-                shell: bash
-                run: |
-                    version="$(curl -s https://github.com/sharkdp/fd/releases/latest/ | sed -Ee 's#.*\"([^"]*)\".*#\1#' -e 's#.*/##' )"
-                    command wget --progress=bar:noscroll --show-progress --no-verbose "https://github.com/sharkdp/fd/releases/latest/download/fd-${version}-x86_64-pc-windows-msvc.zip"
-                    7z e "fd-${version}-x86_64-pc-windows-msvc.zip" -o$HOME/fd-find
+              if: startsWith(matrix.os, 'windows')
+              shell: bash
+              run: |
+                version="$(curl -s https://github.com/sharkdp/fd/releases/latest/ | sed -Ee 's#.*\"([^"]*)\".*#\1#' -e 's#.*/##' )"
+                command wget --progress=bar:noscroll --show-progress --no-verbose "https://github.com/sharkdp/fd/releases/latest/download/fd-${version}-x86_64-pc-windows-msvc.zip"
+                7z e "fd-${version}-x86_64-pc-windows-msvc.zip" -o$HOME/fd-find
             ##########
             - name: Install Latest Rust Toolchain
-                uses: actions-rs/toolchain@v1
-                with:
-                    toolchain: ${{ env.RUST_CHANNEL }}
-                    profile: minimal
-                    override: true
-                    #??? I want to question the need for this to have an explicit target in addition to the target passed in the build step, but at the same time, I don't actually care as long as it works.
-                    target: ${{ matrix.target }}
+              uses: actions-rs/toolchain@v1
+              with:
+                toolchain: ${{ env.RUST_CHANNEL }}
+                profile: minimal
+                override: true
+                #??? I want to question the need for this to have an explicit target in addition to the target passed in the build step, but at the same time, I don't actually care as long as it works.
+                target: ${{ matrix.target }}
             ##########
             - name: Show Toolchain Info
-                shell: bash
-                run: |
-                    gcc --version || true
-                    rustup -V
-                    rustup toolchain list
-                    rustup default
-                    cargo -V
-                    # rustc -V # included in output of `rustup -V`
+              shell: bash
+              run: |
+                gcc --version || true
+                rustup -V
+                rustup toolchain list
+                rustup default
+                cargo -V
+                # rustc -V # included in output of `rustup -V`
             ##########
             - name: Checkout Project Repository
-                uses: actions/checkout@v2
-                with:
-                    repository: ${{ env.CRATE_REPO }}
-                    path: ${{ env.CRATE_PATH }}
+              uses: actions/checkout@v2
+              with:
+                repository: ${{ env.CRATE_REPO }}
+                path: ${{ env.CRATE_PATH }}
             ##########
             - name: Run cargo build
-                uses: actions-rs/cargo@v1
-                with:
-                    use-cross: ${{ matrix.use-cross }}
-                    command: build
-                    args: --release --verbose --locked --target ${{ matrix.target }}
+              uses: actions-rs/cargo@v1
+              with:
+                use-cross: ${{ matrix.use-cross }}
+                command: build
+                args: --release --verbose --locked --target ${{ matrix.target }}
             ##########
             - name: Show directory structure (Ubuntu)
-                # Because I don't know where any given generated artifact is going to be yet
-                if: startsWith(matrix.os, "ubuntu")
-                run: fd-find -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
+              # Because I don't know where any given generated artifact is going to be yet
+              if: startsWith(matrix.os, "ubuntu")
+              run: fd-find -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
             ##########
             - name: Show directory structure (Windows)
-                # Because I don't know where any given generated artifact is going to be yet
-                if: startsWith(matrix.os, "windows")
-                run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
+              # Because I don't know where any given generated artifact is going to be yet
+              if: startsWith(matrix.os, "windows")
+              run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
             ##########
             - name: Create release (Ubuntu)
-                if: startsWith(matrix.os, 'ubuntu')
-                uses: svenstaro/upload-release-action@v2
-                with:
-                    repo_token: ${{ secrets.GITHUB_TOKEN }}
-                    # The name of the binary to upload (not necessarily the name of the downloaded asset)
-                    file: ${{ env.EXECUTABLE_NAME }}
-                    tag: ${{ github.ref }}
-                    asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}
-                    overwrite: true
-                    body: "See relevant repository for information."
+              if: startsWith(matrix.os, 'ubuntu')
+              uses: svenstaro/upload-release-action@v2
+              with:
+                repo_token: ${{ secrets.GITHUB_TOKEN }}
+                # The name of the binary to upload (not necessarily the name of the downloaded asset)
+                file: ${{ env.EXECUTABLE_NAME }}
+                tag: ${{ github.ref }}
+                asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}
+                overwrite: true
+                body: "See relevant repository for information."
             ##########
             - name: Create release (Windows)
-                if: startsWith(matrix.os, 'windows')
-                uses: svenstaro/upload-release-action@v2
-                with:
-                    repo_token: ${{ secrets.GITHUB_TOKEN }}
-                    # The name of the binary to upload (not necessarily the name of the downloaded asset)
-                    file: ${{ env.EXECUTABLE_NAME }}.exe
-                    tag: ${{ github.ref }}
-                    asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}.exe
-                    overwrite: true
-                    body: "See relevant repository for information."
+              if: startsWith(matrix.os, 'windows')
+              uses: svenstaro/upload-release-action@v2
+              with:
+                repo_token: ${{ secrets.GITHUB_TOKEN }}
+                # The name of the binary to upload (not necessarily the name of the downloaded asset)
+                file: ${{ env.EXECUTABLE_NAME }}.exe
+                tag: ${{ github.ref }}
+                asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}.exe
+                overwrite: true
+                body: "See relevant repository for information."
