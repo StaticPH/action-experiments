@@ -60,13 +60,18 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: ${{ env.CRATE_REPO }}
+          # Relative path under $GITHUB_WORKSPACE to place the repository
           path: ${{ env.CRATE_PATH }}
       ##########
       - name: Go To Cargo.toml
-        # Because the repository being checked out has a different name than this repository, it will be placed into its own folder.
+        # Switch to the explicitly specified path, relative to $GITHUB_WORKSPACE, at which the repository has been checked out, ${{ env.CRATE_PATH }}
         # This repository creates D:/a/action-experiments/action-experiments/
         # Git then creates, initializes, and fetches the cargo-feature repository at D:/a/action-experiments/action-experiments/cargo-feature/
-        run: cd ${{ env.CRATE_PATH }}
+        shell: bash
+        run: |
+          printf 'Previous working directory: "%s"\n' "$(pwd)"
+          pushd "$GITHUB_WORKSPACE/${{ env.CRATE_PATH }}"
+          printf 'Present working directory: "%s"\n' "$(pwd)"
       ##########
       - name: getenv
         shell: bash
