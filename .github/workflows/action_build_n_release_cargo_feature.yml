@@ -22,6 +22,7 @@ jobs:
           - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
     steps:
+      ##########
       - name: Get fd (Ubuntu)
         if: startsWith(matrix.job.os, 'ubuntu')
         run: |
@@ -33,7 +34,7 @@ jobs:
         shell: bash
         run: |
           version="$(curl -s https://github.com/sharkdp/fd/releases/latest/ | sed -Ee 's#.*\"([^"]*)\".*#\1#' -e 's#.*/##' )"
-          command wget --progress=bar:noscroll --show-progress --no-verbose "https://github.com/sharkdp/fd/releases/latest/download/fd-${version}-x86_64-pc-windows-msvc.zip"
+          curl -sL "https://github.com/sharkdp/fd/releases/latest/download/fd-${version}-x86_64-pc-windows-msvc.zip" --output "fd-${version}-x86_64-pc-windows-msvc.zip"
           7z e "fd-${version}-x86_64-pc-windows-msvc.zip" -o$HOME/fd-find
       ##########
       - name: Install Latest Rust Toolchain
