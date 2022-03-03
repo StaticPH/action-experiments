@@ -4,26 +4,22 @@ on: workflow_dispatch
 jobs:
     build-cargo-feature:
         env:
-            CRATE_REPO: "riey/cargo-feature"
-            CRATE_PATH: "cargo-feature"
-            EXECUTABLE_NAME: "cargo-feature"
+            CRATE_REPO: riey/cargo-feature
+            CRATE_PATH: cargo-feature
+            EXECUTABLE_NAME: cargo-feature
+            # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
+            RUST_CHANNEL: stable
         name: Build Release ${{ matrix.target }} (${{ matrix.os }})
         runs-on: ${{ matrix.os }}
         strategy:
             # If one matrix-job fails, continue with remaining jobs.
             fail-fast: false
             matrix:
-                # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
-                rustChannel: stable
-                # The name of the binary to upload (not necessarily the name of the downloaded asset)
-                binaryName: ${{ env.EXECUTABLE_NAME }}
                 ### Specifically use windows-2019 rather than windows-latest
                 ### It sounds like references to use-cross will simply be ignored for matrix jobs that never define it?
                 - { os: windows-2019, target: x86_64-pc-windows-msvc                     }
                 - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
                 - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
-                if: ${{ matrix.os }} == 'windows-2019'
-                   binaryName: ${{ matrix.binaryName }}.exe
         steps:
             - name: Get fd (Ubuntu)
                 if: startsWith(matrix.os, 'ubuntu')
@@ -42,7 +38,7 @@ jobs:
             - name: Install Latest Rust Toolchain
                 uses: actions-rs/toolchain@v1
                 with:
-                    toolchain: ${{ matrix.rustChannel }}
+                    toolchain: ${{ env.RUST_CHANNEL }}
                     profile: minimal
                     override: true
                     #??? I want to question the need for this to have an explicit target in addition to the target passed in the build step, but at the same time, I don't actually care as long as it works.
@@ -67,9 +63,9 @@ jobs:
             - name: Run cargo build
                 uses: actions-rs/cargo@v1
                 with:
-                  use-cross: ${{ matrix.use-cross }}
-                  command: build
-                  args: --release --verbose --locked --target ${{ matrix.target }}
+                    use-cross: ${{ matrix.use-cross }}
+                    command: build
+                    args: --release --verbose --locked --target ${{ matrix.target }}
             ##########
             - name: Show directory structure (Ubuntu)
                 # Because I don't know where any given generated artifact is going to be yet
@@ -83,21 +79,24 @@ jobs:
             ##########
             - name: Create release (Ubuntu)
                 if: startsWith(matrix.os, 'ubuntu')
-                    uses: svenstaro/upload-release-action@v2
-                    with:
-                        repo_token: ${{ secrets.GITHUB_TOKEN }}
-                        file: ${{ matrix.binaryName }}
-                        tag: ${{ github.ref }}
-                        asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}
-                        overwrite: true
-                        body: "See relevant repository for information."
+                uses: svenstaro/upload-release-action@v2
+                with:
+                    repo_token: ${{ secrets.GITHUB_TOKEN }}
+                    # The name of the binary to upload (not necessarily the name of the downloaded asset)
+                    file: ${{ env.EXECUTABLE_NAME }}
+                    tag: ${{ github.ref }}
+                    asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}
+                    overwrite: true
+                    body: "See relevant repository for information."
+            ##########
             - name: Create release (Windows)
                 if: startsWith(matrix.os, 'windows')
-                    uses: svenstaro/upload-release-action@v2
-                    with:
-                        repo_token: ${{ secrets.GITHUB_TOKEN }}
-                        file: ${{ matrix.binaryName }}
-                        tag: ${{ github.ref }}
-                        asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}.exe
-                        overwrite: true
-                        body: "See relevant repository for information."
+                uses: svenstaro/upload-release-action@v2
+                with:
+                    repo_token: ${{ secrets.GITHUB_TOKEN }}
+                    # The name of the binary to upload (not necessarily the name of the downloaded asset)
+                    file: ${{ env.EXECUTABLE_NAME }}.exe
+                    tag: ${{ github.ref }}
+                    asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}.exe
+                    overwrite: true
+                    body: "See relevant repository for information."
