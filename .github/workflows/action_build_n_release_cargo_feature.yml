@@ -62,6 +62,12 @@ jobs:
           repository: ${{ env.CRATE_REPO }}
           path: ${{ env.CRATE_PATH }}
       ##########
+      - name: Go To Cargo.toml
+        # Because the repository being checked out has a different name than this repository, it will be placed into its own folder.
+        # This repository creates D:/a/action-experiments/action-experiments/
+        # Git then creates, initializes, and fetches the cargo-feature repository at D:/a/action-experiments/action-experiments/cargo-feature/
+        run: cd ${{ env.CRATE_PATH }}
+      ##########
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
