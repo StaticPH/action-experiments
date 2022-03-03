@@ -9,26 +9,27 @@ jobs:
       EXECUTABLE_NAME: cargo-feature
       # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
       RUST_CHANNEL: stable
-    name: Build Release ${{ matrix.target }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
+    runs-on: ${{ matrix.job.os }}
     strategy:
       # If one matrix-job fails, continue with remaining jobs.
       fail-fast: false
       matrix:
-        ### Specifically use windows-2019 rather than windows-latest
-        ### It sounds like references to use-cross will simply be ignored for matrix jobs that never define it?
-        - { os: windows-2019, target: x86_64-pc-windows-msvc                     }
-        - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
-        - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
+        job:
+          ### Specifically use windows-2019 rather than windows-latest
+          ### It sounds like references to use-cross will simply be ignored for matrix jobs that never define it?
+          - { os: windows-2019, target: x86_64-pc-windows-msvc                     }
+          - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
+          - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
     steps:
       - name: Get fd (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu')
+        if: startsWith(matrix.job.os, 'ubuntu')
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fd-find
       ##########
       - name: Get fd (Windows)
-        if: startsWith(matrix.os, 'windows')
+        if: startsWith(matrix.job.os, 'windows')
         shell: bash
         run: |
           version="$(curl -s https://github.com/sharkdp/fd/releases/latest/ | sed -Ee 's#.*\"([^"]*)\".*#\1#' -e 's#.*/##' )"
@@ -42,7 +43,7 @@ jobs:
           profile: minimal
           override: true
           #??? I want to question the need for this to have an explicit target in addition to the target passed in the build step, but at the same time, I don't actually care as long as it works.
-          target: ${{ matrix.target }}
+          target: ${{ matrix.job.target }}
       ##########
       - name: Show Toolchain Info
         shell: bash
@@ -63,40 +64,40 @@ jobs:
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
-          use-cross: ${{ matrix.use-cross }}
+          use-cross: ${{ matrix.job.use-cross }}
           command: build
-          args: --release --verbose --locked --target ${{ matrix.target }}
+          args: --release --verbose --locked --target ${{ matrix.job.target }}
       ##########
       - name: Show directory structure (Ubuntu)
         # Because I don't know where any given generated artifact is going to be yet
-        if: startsWith(matrix.os, "ubuntu")
+        if: startsWith(matrix.job.os, "ubuntu")
         run: fd-find -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Show directory structure (Windows)
         # Because I don't know where any given generated artifact is going to be yet
-        if: startsWith(matrix.os, "windows")
+        if: startsWith(matrix.job.os, "windows")
         run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Create release (Ubuntu)
-        if: startsWith(matrix.os, 'ubuntu')
+        if: startsWith(matrix.job.os, 'ubuntu')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           # The name of the binary to upload (not necessarily the name of the downloaded asset)
           file: ${{ env.EXECUTABLE_NAME }}
           tag: ${{ github.ref }}
-          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}
+          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.job.target }}
           overwrite: true
           body: See relevant repository for information.
       ##########
       - name: Create release (Windows)
-        if: startsWith(matrix.os, 'windows')
+        if: startsWith(matrix.job.os, 'windows')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           # The name of the binary to upload (not necessarily the name of the downloaded asset)
           file: ${{ env.EXECUTABLE_NAME }}.exe
           tag: ${{ github.ref }}
-          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.target }}.exe
+          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.job.target }}.exe
           overwrite: true
           body: See relevant repository for information.
