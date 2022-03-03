@@ -25,6 +25,7 @@ jobs:
       ##########
       - name: Get fd (Ubuntu)
         if: startsWith(matrix.job.os, 'ubuntu')
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends fd-find
@@ -104,11 +105,13 @@ jobs:
       - name: Show directory structure (Ubuntu)
         # Because I don't know where any given generated artifact is going to be yet
         if: startsWith(matrix.job.os, 'ubuntu')
+        shell: bash
         run: fdfind -uuaL -d 5 --path-separator "//" --one-file-system -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Show directory structure (Windows)
         # Because I don't know where any given generated artifact is going to be yet
         if: startsWith(matrix.job.os, 'windows')
+        shell: bash
         run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" --one-file-system -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Create release (Ubuntu)
