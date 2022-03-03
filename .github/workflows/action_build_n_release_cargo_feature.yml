@@ -69,6 +69,7 @@ jobs:
         # Git then creates, initializes, and fetches the cargo-feature repository at D:/a/action-experiments/action-experiments/cargo-feature/
         shell: bash
         run: |
+          printf '%s\n' 'This is probably a pointless step...'
           printf 'Previous working directory: "%s"\n' "$(pwd)"
           pushd "$GITHUB_WORKSPACE/${{ env.CRATE_PATH }}"
           printf 'Present working directory: "%s"\n' "$(pwd)"
@@ -109,7 +110,7 @@ jobs:
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: build
-          args: --release --verbose --locked --target ${{ matrix.job.target }}
+          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "$GITHUB_WORKSPACE/${{ env.CRATE_PATH }}/Cargo.toml"
       ##########
       - name: Show directory structure (Ubuntu)
         # Because I don't know where any given generated artifact is going to be yet
