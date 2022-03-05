@@ -74,6 +74,15 @@ jobs:
             CRATE_RELEASE_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' ${{ env.CRATE_WORKDIR }}/Cargo.toml | head -n1)"
             echo ::set-output name=CRATE_RELEASE_VERSION::${CRATE_RELEASE_VERSION}
       ##########
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+        with:
+          # Since the cargo project is not located in the repo root, specify the working directory the action should operate in.
+          working-directory: ${{ env.CRATE_WORKDIR }}
+          # The target directory that should be cleaned and persisted. Defaults to `./target`, but we have separate directories within `./target` for each build-target in the job matrix, so we probably want `./target/${{ matrix.job.target }}`.
+          # "target" directory generally contains CARGO_BUILD_PROFILE/{deps,build,examples,incremental,.rustc_info.json,CACHEDIR.TAG}"
+          target-dir: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}
+      ##########
       - name: Show working directory structure (Ubuntu)
         # Because I don't know what's where
         if: startsWith(matrix.job.os, 'ubuntu')
