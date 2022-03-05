@@ -5,8 +5,10 @@ jobs:
   build-cargo-feature:
     env:
       CRATE_REPO: riey/cargo-feature
-      CRATE_PATH: cargo-feature
+      # Relative path under $GITHUB_WORKSPACE to place the repository
+      CRATE_DIRNAME: cargo-feature
       EXECUTABLE_NAME: cargo-feature
+      CRATE_WORKDIR: ${{ github.workspace }/${{ env.CRATE_DIRNAME }}
       # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
       RUST_CHANNEL: stable
     name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -62,7 +64,15 @@ jobs:
         with:
           repository: ${{ env.CRATE_REPO }}
           # Relative path under $GITHUB_WORKSPACE to place the repository
-          path: ${{ env.CRATE_PATH }}
+          path: ${{ env.CRATE_DIRNAME }}
+      ##########
+      - name: Evaluate Release Version
+        id: get-version
+        shell: bash
+        # There may be useful information in here that really should be clearly documented somewhere, but isn't.
+        run: |
+            CRATE_RELEASE_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' ${{ env.CRATE_WORKDIR }}/Cargo.toml | head -n1)"
+            echo ::set-output name=CRATE_RELEASE_VERSION::${CRATE_RELEASE_VERSION}
       ##########
       - name: Show working directory structure (Ubuntu)
         # Because I don't know what's where
@@ -100,7 +110,7 @@ jobs:
         with:
           use-cross: ${{ matrix.job.use-cross }}
           command: build
-          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "${{ github.workspace }}/${{ env.CRATE_PATH }}/Cargo.toml"
+          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "${{ env.CRATE_WORKDIR }}/Cargo.toml"
       ##########
       - name: Show directory structure (Ubuntu)
         # Because I don't know where any given generated artifact is going to be yet
@@ -119,11 +129,14 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          # The name of the binary to upload (not necessarily the name of the downloaded asset)
-          file: ${{ env.EXECUTABLE_NAME }}
-          tag: ${{ github.ref }}
-          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.job.target }}
+          # The path of the asset to upload (not necessarily the name of the downloaded asset)
+          file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}
+          # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
+          tag: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          # The name the asset should be uploaded as
+          asset_name: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}
           overwrite: true
+          # Release text
           body: See relevant repository for information.
       ##########
       - name: Create release (Windows)
@@ -131,9 +144,12 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          # The name of the binary to upload (not necessarily the name of the downloaded asset)
-          file: ${{ env.EXECUTABLE_NAME }}.exe
-          tag: ${{ github.ref }}
-          asset_name: ${{ env.BINARY_NAME }}-$tag-${{ matrix.job.target }}.exe
+          # The path of the asset to upload (not necessarily the name of the downloaded asset)
+          file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}.exe
+          # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
+          tag: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          # The name the asset should be uploaded as
+          asset_name: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}.exe
           overwrite: true
+          # Release text
           body: See relevant repository for information.
