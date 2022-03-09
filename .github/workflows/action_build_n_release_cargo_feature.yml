@@ -8,7 +8,7 @@ jobs:
       # Relative path under $GITHUB_WORKSPACE to place the repository
       CRATE_DIRNAME: cargo-feature
       EXECUTABLE_NAME: cargo-feature
-      CRATE_WORKDIR: ${{ github.workspace }}/${{ env.CRATE_DIRNAME }}
+      CRATE_WORKDIR: ${{ github.workspace }/${{ env.CRATE_DIRNAME }}
       # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
       RUST_CHANNEL: stable
     name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
