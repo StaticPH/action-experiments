@@ -8,7 +8,6 @@ jobs:
       # Relative path under $GITHUB_WORKSPACE to place the repository
       CRATE_DIRNAME: cargo-feature
       EXECUTABLE_NAME: cargo-feature
-      CRATE_WORKDIR: "${{ github.workspace }}/${{ env.CRATE_DIRNAME }}"
       # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
       RUST_CHANNEL: stable
     name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -24,6 +23,11 @@ jobs:
           - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
     steps:
+      ##########
+      - name: Set finicky variables
+        shell: bash
+        run: |
+          echo "CRATE_WORKDIR=${{ github.workspace }}/${{ env.CRATE_DIRNAME }}" >> $GITHUB_ENV
       ##########
       - name: Get fd (Ubuntu)
         if: startsWith(matrix.job.os, 'ubuntu')
