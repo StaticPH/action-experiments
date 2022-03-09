@@ -145,9 +145,9 @@ jobs:
           # The path of the asset to upload (not necessarily the name of the downloaded asset)
           file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}
           # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
-          tag: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          tag: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
           # The name the asset should be uploaded as
-          asset_name: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}
+          asset_name: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}
           overwrite: true
           # Release text
           body: See relevant repository for information.
@@ -160,7 +160,7 @@ jobs:
           # The path of the asset to upload (not necessarily the name of the downloaded asset)
           file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}.exe
           # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
-          tag: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          tag: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
           # The name the asset should be uploaded as
           asset_name: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}.exe
           overwrite: true
