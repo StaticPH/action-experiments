@@ -1,15 +1,15 @@
-name: Build Rust crate release
+name: Build shellharden
 # Run only on-demand
 on: workflow_dispatch
 jobs:
-  build-cargo-feature:
+  build-shellharden:
     env:
-      CRATE_REPO: riey/cargo-feature
+      CRATE_REPO: anordal/shellharden
       # Relative path under $GITHUB_WORKSPACE to place the repository
-      CRATE_DIRNAME: cargo-feature
-      EXECUTABLE_NAME: cargo-feature
-      # Use stable vs nightly (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds
-      RUST_CHANNEL: stable
+      CRATE_DIRNAME: shellharden
+      EXECUTABLE_NAME: shellharden
+      # Use nightly vs stable (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds, but why not :)
+      RUST_CHANNEL: nightly
     name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
     runs-on: ${{ matrix.job.os }}
     strategy:
@@ -20,7 +20,7 @@ jobs:
           ### Specifically use windows-2019 rather than windows-latest
           ### It sounds like references to use-cross will simply be ignored for matrix jobs that never define it?
           - { os: windows-2019, target: x86_64-pc-windows-msvc                     }
-          - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
+          # - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
           - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
     steps:
       ##########
@@ -28,21 +28,6 @@ jobs:
         shell: bash
         run: |
           echo "CRATE_WORKDIR=${{ github.workspace }}/${{ env.CRATE_DIRNAME }}" | sed -E 's@\\([^ ])@/\1@g' >> $GITHUB_ENV
-      ##########
-      - name: Get fd (Ubuntu)
-        if: startsWith(matrix.job.os, 'ubuntu')
-        shell: bash
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fd-find
-      ##########
-      - name: Get fd (Windows)
-        if: startsWith(matrix.job.os, 'windows')
-        shell: bash
-        run: |
-          version="$(curl -s https://github.com/sharkdp/fd/releases/latest/ | sed -Ee 's#.*\"([^"]*)\".*#\1#' -e 's#.*/##' )"
-          curl -sL "https://github.com/sharkdp/fd/releases/latest/download/fd-${version}-x86_64-pc-windows-msvc.zip" --output "fd-${version}-x86_64-pc-windows-msvc.zip"
-          7z e "fd-${version}-x86_64-pc-windows-msvc.zip" -o$HOME/fd-find
       ##########
       - name: Install Latest Rust Toolchain
         uses: actions-rs/toolchain@v1
@@ -64,11 +49,12 @@ jobs:
           # rustc -V # included in output of `rustup -V`
       ##########
       - name: Checkout Project Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: ${{ env.CRATE_REPO }}
           # Relative path under $GITHUB_WORKSPACE to place the repository
           path: ${{ env.CRATE_DIRNAME }}
+          fetch-depth: 1
       ##########
       - name: Evaluate Release Version
         id: get-version
@@ -87,32 +73,6 @@ jobs:
           # "target" directory generally contains CARGO_BUILD_PROFILE/{deps,build,examples,incremental,.rustc_info.json,CACHEDIR.TAG}"
           target-dir: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}
       ##########
-      - name: Show working directory structure (Ubuntu)
-        # Because I don't know what's where
-        if: startsWith(matrix.job.os, 'ubuntu')
-        shell: bash
-        run: |
-          printf 'Present working directory: "%s"\n' "$(pwd)"
-          # Display as a tree, if possible
-          if command -v tree >/dev/null 2>&1; then
-            fdfind -uuaL -E '.git' | command tree -al
-          else
-            fdfind -uuaL -E '.git'
-          fi
-      ##########
-      - name: Show working directory structure (Windows)
-        # Because I don't know what's where
-        if: startsWith(matrix.job.os, 'windows')
-        shell: bash
-        run: |
-          printf 'Present working directory: "%s"\n' "$(pwd)"
-          # Display as a tree, if possible
-          if command -v tree >/dev/null 2>&1; then
-            $HOME/fd-find/fd.exe -uuaL -E '.git' | command tree -al
-          else
-            $HOME/fd-find/fd.exe -uuaL -E '.git'
-          fi
-      ##########
       - name: getenv
         shell: bash
         # There may be useful information in here that really should be clearly documented somewhere, but isn't.
@@ -124,18 +84,6 @@ jobs:
           use-cross: ${{ matrix.job.use-cross }}
           command: build
           args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "${{ env.CRATE_WORKDIR }}/Cargo.toml"
-      ##########
-      - name: Show directory structure (Ubuntu)
-        # Because I don't know where any given generated artifact is going to be yet
-        if: startsWith(matrix.job.os, 'ubuntu')
-        shell: bash
-        run: fdfind -uuaL -d 5 --path-separator "//" -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
-      ##########
-      - name: Show directory structure (Windows)
-        # Because I don't know where any given generated artifact is going to be yet
-        if: startsWith(matrix.job.os, 'windows')
-        shell: bash
-        run: $HOME/fd-find/fd.exe -uuaL -d 5 --path-separator "//" -E ".git" -E "*.o" -E "*.d" -E "*.exp" -E "*.rlib" -E "*.rmeta" -E "*.pdb" -E ".fingerprint" -E "*.timestamp" -E "output" -E "root-output" -E "stderr" -E "build-script*" -E "build_script*" -E "*.rs" -E "*.dll" -E "*.lib"
       ##########
       - name: Create release (Ubuntu)
         if: startsWith(matrix.job.os, 'ubuntu')
