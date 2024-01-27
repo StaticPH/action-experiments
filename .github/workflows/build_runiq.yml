@@ -1,0 +1,116 @@
+name: Build runiq
+# Run only on-demand
+on: workflow_dispatch
+jobs:
+  build-cargo-feature:
+    env:
+      CRATE_REPO: whitfin/runiq
+      # Relative path under $GITHUB_WORKSPACE to place the repository
+      CRATE_DIRNAME: runiq
+      EXECUTABLE_NAME: runiq
+      # Use nightly vs stable (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds, but why not :)
+      RUST_CHANNEL: nightly
+    name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
+    runs-on: ${{ matrix.job.os }}
+    strategy:
+      # If one matrix-job fails, continue with remaining jobs.
+      fail-fast: false
+      matrix:
+        job:
+          ### Specifically use windows-2019 rather than windows-latest
+          ### It sounds like references to use-cross will simply be ignored for matrix jobs that never define it?
+          - { os: windows-2019, target: x86_64-pc-windows-msvc                     }
+          # - { os: windows-2019, target: x86_64-pc-windows-gnu                      }
+          - { os: ubuntu-20.04, target: x86_64-unknown-linux-musl, use-cross: true }
+    steps:
+      ##########
+      - name: Set finicky variables
+        shell: bash
+        run: |
+          echo "CRATE_WORKDIR=${{ github.workspace }}/${{ env.CRATE_DIRNAME }}" | sed -E 's@\\([^ ])@/\1@g' >> $GITHUB_ENV
+      ##########
+      - name: Install Latest Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_CHANNEL }}
+          profile: minimal
+          override: true
+          #??? I want to question the need for this to have an explicit target in addition to the target passed in the build step, but at the same time, I don't actually care as long as it works.
+          target: ${{ matrix.job.target }}
+      ##########
+      - name: Show Toolchain Info
+        shell: bash
+        run: |
+          gcc --version || true
+          rustup -V
+          rustup toolchain list
+          rustup default
+          cargo -V
+          # rustc -V # included in output of `rustup -V`
+      ##########
+      - name: Checkout Project Repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ env.CRATE_REPO }}
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: ${{ env.CRATE_DIRNAME }}
+          fetch-depth: 1
+      ##########
+      - name: Evaluate Release Version
+        id: get-version
+        shell: bash
+        # There may be useful information in here that really should be clearly documented somewhere, but isn't.
+        run: |
+            CRATE_RELEASE_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' ${{ env.CRATE_WORKDIR }}/Cargo.toml | head -n1)"
+            echo ::set-output name=CRATE_RELEASE_VERSION::${CRATE_RELEASE_VERSION}
+      ##########
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+        with:
+          # Since the cargo project is not located in the repo root, specify the working directory the action should operate in.
+          working-directory: ${{ env.CRATE_WORKDIR }}
+          # The target directory that should be cleaned and persisted. Defaults to `./target`, but we have separate directories within `./target` for each build-target in the job matrix, so we probably want `./target/${{ matrix.job.target }}`.
+          # "target" directory generally contains CARGO_BUILD_PROFILE/{deps,build,examples,incremental,.rustc_info.json,CACHEDIR.TAG}"
+          target-dir: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}
+      ##########
+      - name: getenv
+        shell: bash
+        # There may be useful information in here that really should be clearly documented somewhere, but isn't.
+        run: env
+      ##########
+      - name: Run cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.job.use-cross }}
+          command: build
+          args: --release --verbose --locked --target ${{ matrix.job.target }} --manifest-path "${{ env.CRATE_WORKDIR }}/Cargo.toml"
+      ##########
+      - name: Create release (Ubuntu)
+        if: startsWith(matrix.job.os, 'ubuntu')
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # The path of the asset to upload (not necessarily the name of the downloaded asset)
+          file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}
+          # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
+          tag: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          # The name the asset should be uploaded as
+          asset_name: ${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}
+          overwrite: true
+          # Release text
+          body: See relevant repository for information.
+      ##########
+      - name: Create release (Windows)
+        if: startsWith(matrix.job.os, 'windows')
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          # The path of the asset to upload (not necessarily the name of the downloaded asset)
+          file: ${{ env.CRATE_WORKDIR }}/target/${{ matrix.job.target }}/release/${{ env.EXECUTABLE_NAME }}.exe
+          # In general, it's best to use a specific tag/SHA/release-number/reference for this, but if just the latest commit on the master branch is fine, you can use ${{ github.ref }}
+          tag: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}
+          # The name the asset should be uploaded as
+          asset_name: ${{ env.EXECUTABLE_NAME }}-${{ steps.get-version.outputs.CRATE_RELEASE_VERSION }}-${{ matrix.job.target }}.exe
+          overwrite: true
+          # Release text
+          body: See relevant repository for information.
