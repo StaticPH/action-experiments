@@ -1,13 +1,13 @@
-name: Build cargo-update
+name: Build @@TARGET_ARTIFACT@@
 # Run only on-demand
 on: workflow_dispatch
 jobs:
-  build-cargo-update:
+  build-@@TARGET_ARTIFACT@@:
     env:
-      CRATE_REPO: nabijaczleweli/cargo-update
+      CRATE_REPO: @@CRATE_REPO@@
       # Relative path under $GITHUB_WORKSPACE to place the repository
-      CRATE_DIRNAME: cargo-update
-      EXECUTABLE_NAME: cargo-update
+      CRATE_DIRNAME: @@TARGET_ARTIFACT@@
+      EXECUTABLE_NAME: @@TARGET_ARTIFACT@@
       # Use nightly vs stable (vs beta) channel rustc; in general, I expect stable to be sufficient for proper release builds, but why not :)
       RUST_CHANNEL: nightly
     name: Build Release ${{ matrix.job.target }} (${{ matrix.job.os }})
@@ -49,7 +49,7 @@ jobs:
           # rustc -V # included in output of `rustup -V`
       ##########
       - name: Checkout Project Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: ${{ env.CRATE_REPO }}
           # Relative path under $GITHUB_WORKSPACE to place the repository
